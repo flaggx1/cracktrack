@@ -6,14 +6,19 @@
 use strict;
 use warnings;
 use Getopt::Long;
+use Term::ReadKey;
 use threads;
 use threads::shared;
+use Time::HiRes qw(usleep);
 use Term::ANSIColor qw(:constants);
+
+## Change terminal mode to enable keypress updates
+ReadMode 3;
 
 ## Define defaults for program
 my $potfile_path;
 my @leftlist_paths;
-my $print_interval = 1;
+my $print_interval = 15;
 my $time_enable = 0;
 my $unique_only = 0;
 
@@ -90,7 +95,6 @@ sub monitor_potfile {
         chomp $line;
 
         if (my ($hash) = split(/:/, $line)) {
-
           ## Hash lowercased for comparison purposes. Some hash cracking programs convert hashes to lowercase.
           $hash = lc($hash);
 
@@ -172,8 +176,9 @@ sub status_thread {
       $start_day = $current_time;
     }
 
-    ## Print status message after specified interval
-    if ($current_time - $start_print >= ($print_interval * 60)) {
+    ## Print status message after specified interval or when any key is pressed
+    if ($current_time - $start_print >= ($print_interval * 60) || defined (my $key = ReadKey(-1))) {
+
       my $formatted_time = $time_enable ? get_current_time() . ' ' : '';
 
       printf("Cracks/Time %s| Current: %05.2fm %05.2fh %05.2fd | Average: %05.2fm %05.2fh %05.2fd\n",
@@ -185,7 +190,8 @@ sub status_thread {
       $start_print = $current_time;
     }
 
-    sleep 1;
+  ## Sleep for 50 milliseconds
+  usleep(50000);
   }
 }
 
@@ -203,6 +209,11 @@ sub error {
   die RED "Error: ", $message, RESET, "\n";
 }
 
+## Reset terminal settings upon any exit
+END {
+  ReadMode(0);
+}
+
 sub help {
   print "--CrackTrack-- by Flagg [Hashmob], 2023\n";
   print "Potfile Monitoring and Statistics\n\n";
@@ -210,7 +221,7 @@ sub help {
   print "  -p   -potfile    Potfile or outfile to be monitored.\n\n";
   print "Optional:\n\n";
   print "  -l   -leftlist   Monitor only cracks from leftlist. Supports multiple leftlists.\n";
-  print "  -i   -interval   Output interval in minutes. Default is 1 minute.\n";
+  print "  -i   -interval   Output interval in minutes. Default is 15 minutes.\n";
   print "  -u   -unique     Cracks are only counted once. Increases memory usage.\n";
   print "  -t   -time       Print current date and time in output.\n\n";
   print "Notes:\n\n";
@@ -219,6 +230,7 @@ sub help {
   print "  -Stats are calculated for timeframes only once per cycle. No interpolation.\n";
   print "  -Hashes are all lowercased (only in memory) for comparison purposes.\n";
   print "  -Unique can be utilized when duplicate hashes are expected in potfile.\n";
+  print "  -Press any key to print the status display screen. Interval still prints.\n";
   print "  -Based on Virodoran idea to monitor cracks relating to specific leftlists.\n\n";
   exit;
 }
