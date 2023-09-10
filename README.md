@@ -2,6 +2,8 @@
 
 **CrackTrack** is a hashcat potfile monitoring program that prints cracking statistics for time periods. It prints cracks per minute, hour, and day based on the hashcat potfile or outfile. The current time period and a total average is printed. Supports the use of one or more leftlists to calculate statistics on only desired hashes. No interpolation is performed, and statistics are printed only after at least one time cycle completes.
 
+Note that hashcat itself does calculate and output cracks over time statistics, and in basic mode this program duplicates that functionality.
+
 ### License ###
 
 **CrackTrack** is licensed under the MIT license.
