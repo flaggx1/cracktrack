@@ -11,6 +11,7 @@
 -p   -potfile    Potfile or outfile to be monitored.
 -l   -leftlist   Monitor only cracks from leftlist. Supports multiple leftlists.
 -i   -interval   Output interval in seconds. Minimum is 60 seconds.
+-u   -unique     Cracks are only counted once. Increases memory usage.
 -t   -time       Print current date and time in output.
 ```
 ### Examples ###
@@ -32,4 +33,6 @@ cracktrack.pl -p hashcat.potfile -t -i 60
 * Multiple leftlists can be specified: -l 'list1' -l 'list2' -l 'list3'
 * Ensure you have enough memory for leftlists, they are stored in a hash.
 * Stats are calculated for timeframes only once per cycle. No interpolation.
+* Hashes are all lowercased (only in memory) for comparison purposes.
+* Unique can be utilized when duplicate hashes are expected in potfile.
 * Based on Virodoran idea to monitor cracks relating to specific leftlists.
