@@ -10,13 +10,14 @@ use threads;
 use threads::shared;
 use Term::ANSIColor qw(:constants);
 
-## Define options for program
+## Define defaults for program
 my $potfile_path;
 my @leftlist_paths;
 my $print_interval = 1;
 my $time_enable = 0;
 my $unique_only = 0;
 
+## Set user defined options
 GetOptions(
   "help|h|?" => sub { help(); },
   "p|potfile=s" => \$potfile_path,
@@ -55,11 +56,16 @@ sub load_leftlists {
 
     print BOLD GREEN "Loading Leftlist: $leftlist_path", RESET, "\n";
 
-    open(LEFTLIST, '<', $leftlist_path) or error ("Cannot open leftlist ($leftlist_path)");
+    open(LEFTLIST, '<', $leftlist_path) or error ("Cannot open leftlist! ($leftlist_path)");
 
     while (my $hash = <LEFTLIST>) {
       chomp $hash;
-      $leftlist_hashes{lc($hash)} = 1;
+
+      ## Hash lowercased for comparison purposes. Some hash cracking programs convert hashes to lowercase.
+      $hash = lc($hash);
+
+      ## Add hash to leftlist lookup table
+      $leftlist_hashes{$hash} = 1;
     }
   }
   return \%leftlist_hashes;
@@ -74,7 +80,7 @@ sub monitor_potfile {
 
   print BOLD GREEN "Monitoring Potfile: $potfile_path", RESET, "\n\n";
 
-  open(POTFILE, '<', $potfile_path) or error("Cannot open potfile: $potfile_path");
+  open(POTFILE, '<', $potfile_path) or error("Cannot open potfile! ($potfile_path)");
   seek(POTFILE, 0, 2);  ## Seek to end of the file to read only new lines
 
   ## Continuously read new lines from potfile, with a one second delay between checks
@@ -84,6 +90,10 @@ sub monitor_potfile {
         chomp $line;
 
         if (my ($hash) = split(/:/, $line)) {
+
+          ## Hash lowercased for comparison purposes. Some hash cracking programs convert hashes to lowercase.
+          $hash = lc($hash);
+
           ## If unique_only is enabled, ensure hashes are only counted once
           if ($unique_only) {
             next if $hashes_seen{$hash};
@@ -95,7 +105,7 @@ sub monitor_potfile {
 
           ## If leftlists were specified, search for cracked hashes and increment crack count only if matched
           if (%$leftlist_hashes) {
-            if ($leftlist_hashes->{lc($hash)}) {
+            if ($leftlist_hashes->{$hash}) {
               $crack_count++;
             }
           }
@@ -131,6 +141,8 @@ sub status_thread {
   ## Main time loop
   while () {
     my $current_time = time;
+
+    ## 60 seconds = 1 minute
     if ($current_time - $start_minute >= 60) {
       $cracks_current_minute = $crack_count - $minutes{last};
       $minutes{count}++;
@@ -139,6 +151,8 @@ sub status_thread {
       $cracks_average_minute = 0; $cracks_average_minute = $minutes{cracks} / $minutes{count} if $minutes{count};
       $start_minute = $current_time;
     }
+
+    ## 3600 seconds = 1 hour
     if ($current_time - $start_hour >= 3600) {
       $cracks_current_hour = $crack_count - $hours{last};
       $hours{count}++;
@@ -147,6 +161,8 @@ sub status_thread {
       $cracks_average_hour = 0; $cracks_average_hour = $hours{cracks} / $hours{count} if $hours{count};
       $start_hour = $current_time;
     }
+
+    ## 86400 seconds = 1 day
     if ($current_time - $start_day >= 86400) {
       $cracks_current_day = $crack_count - $days{last};
       $days{count}++;
@@ -159,11 +175,13 @@ sub status_thread {
     ## Print status message after specified interval
     if ($current_time - $start_print >= ($print_interval * 60)) {
       my $formatted_time = $time_enable ? get_current_time() . ' ' : '';
+
       printf("Cracks/Time %s| Current: %05.2fm %05.2fh %05.2fd | Average: %05.2fm %05.2fh %05.2fd\n",
         $formatted_time,
         $cracks_current_minute, $cracks_current_hour, $cracks_current_day,
         $cracks_average_minute, $cracks_average_hour, $cracks_average_day
       );
+
       $start_print = $current_time;
     }
 
