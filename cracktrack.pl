@@ -15,13 +15,17 @@ my $potfile_path;
 my @leftlist_paths;
 my $print_interval = 1;
 my $time_enable = 0;
+my $unique_only = 0;
+
 GetOptions(
   "help|h|?" => sub { help(); },
   "p|potfile=s" => \$potfile_path,
   "l|leftlist=s" => \@leftlist_paths,
   "i|interval=n" => \$print_interval,
+  "u|unique" => \$unique_only,
   "t|time" => \$time_enable)
 or help();
+
 help() unless $potfile_path;
 
 ## Define shared variable to be used in main program and status thread
@@ -45,10 +49,14 @@ sub load_leftlists {
 
   foreach my $leftlist_path (@leftlist_paths) {
     chomp $leftlist_path;
+
     error("Leftlist does not exist! ($leftlist_path)") unless -e $leftlist_path;
     error("Leftlist is not readable! ($leftlist_path)") unless -r $leftlist_path;
+
     print BOLD GREEN "Loading Leftlist: $leftlist_path", RESET, "\n";
+
     open(LEFTLIST, '<', $leftlist_path) or error ("Cannot open leftlist ($leftlist_path)");
+
     while (my $hash = <LEFTLIST>) {
       chomp $hash;
       $leftlist_hashes{lc($hash)} = 1;
@@ -59,25 +67,39 @@ sub load_leftlists {
 
 sub monitor_potfile {
   my ($potfile_path, $leftlist_hashes, $print_interval, $time_enable) = @_;
+  my %hashes_seen;
 
   error("Potfile does not exist! ($potfile_path)") unless -e $potfile_path;
   error("Potfile is not readable! ($potfile_path)") unless -r $potfile_path;
+
   print BOLD GREEN "Monitoring Potfile: $potfile_path", RESET, "\n\n";
+
   open(POTFILE, '<', $potfile_path) or error("Cannot open potfile: $potfile_path");
   seek(POTFILE, 0, 2);  ## Seek to end of the file to read only new lines
 
+  ## Continuously read new lines from potfile, with a one second delay between checks
   while () {
     while (my $line = <POTFILE>) {
       if (defined $line) {
         chomp $line;
+
         if (my ($hash) = split(/:/, $line)) {
+          ## If unique_only is enabled, ensure hashes are only counted once
+          if ($unique_only) {
+            next if $hashes_seen{$hash};
+            $hashes_seen{$hash} = 1;
+          }
+
+          ## Prevent global reading of crack_count while write operations take place
           lock $crack_count;
+
           ## If leftlists were specified, search for cracked hashes and increment crack count only if matched
           if (%$leftlist_hashes) {
             if ($leftlist_hashes->{lc($hash)}) {
               $crack_count++;
             }
           }
+
           ## If no leftlists were specified, add all new cracks to crack count
           else {
             $crack_count++;
@@ -171,11 +193,14 @@ sub help {
   print "Optional:\n\n";
   print "  -l   -leftlist   Monitor only cracks from leftlist. Supports multiple leftlists.\n";
   print "  -i   -interval   Output interval in minutes. Default is 1 minute.\n";
+  print "  -u   -unique     Cracks are only counted once. Increases memory usage.\n";
   print "  -t   -time       Print current date and time in output.\n\n";
   print "Notes:\n\n";
   print "  -Multiple leftlists can be specified: -l 'list1' -l 'list2' -l 'list3'\n";
   print "  -Ensure you have enough memory for leftlists, they are stored in a hash.\n";
   print "  -Stats are calculated for timeframes only once per cycle. No interpolation.\n";
+  print "  -Hashes are all lowercased (only in memory) for comparison purposes.\n";
+  print "  -Unique can be utilized when duplicate hashes are expected in potfile.\n";
   print "  -Based on Virodoran idea to monitor cracks relating to specific leftlists.\n\n";
   exit;
 }
