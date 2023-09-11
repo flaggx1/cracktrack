@@ -181,7 +181,7 @@ sub status_thread {
 
       my $formatted_time = $time_enable ? get_current_time() . ' ' : '';
 
-      printf("Cracks/Time %s| Current: %05.2fm %05.2fh %05.2fd | Average: %05.2fm %05.2fh %05.2fd\n",
+      printf("Cracks/Time %s| Current: %04.2fm %04.2fh %04.2fd | Average: %04.2fm %04.2fh %04.2fd\n",
         $formatted_time,
         $cracks_current_minute, $cracks_current_hour, $cracks_current_day,
         $cracks_average_minute, $cracks_average_hour, $cracks_average_day
