@@ -4,10 +4,6 @@
 
 Note that hashcat itself does calculate and output cracks over time statistics, and in basic mode this program duplicates that functionality.
 
-### License ###
-
-**CrackTrack** is licensed under the MIT license.
-
 ### Flags ###
 ```
 -p   -potfile    Potfile or outfile to be monitored.
@@ -39,3 +35,7 @@ cracktrack.pl -p hashcat.potfile -t -i 60
 * Unique can be utilized when duplicate hashes are expected in potfile.
 * Press any key to print the status display screen. Interval still prints.
 * Based on Virodoran idea to monitor cracks relating to specific leftlists.
+
+### License ###
+
+**CrackTrack** is licensed under the MIT license.
